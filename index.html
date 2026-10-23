@@ -2,66 +2,223 @@
 <html lang="fi">
 <head>
     <meta charset="UTF-8">
-    <title>Laulu- ja Äänigeneraattori</title>
+    <title>Laulu- ja Rytmigeneraattori</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; background: #f4f4f9; color: #333; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; }
-        textarea { width: 100%; height: 110px; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
-        .control-group { margin: 20px 0; background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #e1e1e8; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; }
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 20px; background: #f4f4f9; color: #333; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        textarea { width: 100%; height: 120px; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
+        .section { background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #e1e1e8; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; color: #444; }
         input[type=range] { width: 100%; cursor: pointer; }
         .value-display { float: right; color: #007bff; font-weight: bold; }
-        button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: background 0.2s; }
+        button { background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: background 0.2s; margin-top: 5px; }
         button:hover { background: #0056b3; }
-        button.stop { background: #dc3545; margin-top: 10px; }
+        button.stop { background: #dc3545; }
         button.stop:hover { background: #a71d2a; }
+        .pad-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+        .drum-pad { background: #e2e8f0; border: 2px solid #cbd5e1; padding: 20px; font-size: 18px; font-weight: bold; text-align: center; border-radius: 8px; cursor: pointer; user-select: none; transition: background 0.1s; }
+        .drum-pad:active, .drum-pad.active { background: #3b82f6; color: white; border-color: #2563eb; }
+        .preset-container { display: flex; gap: 10px; margin-top: 10px; }
+        .preset-container button { background: #10b981; }
+        .preset-container button:hover { background: #059669; }
     </style>
 </head>
 <body>
 
-    <h1>🎵 Selaimen Ääni- ja Laulugeneraattori</h1>
-    <p>Kirjoita omat sanat ja säädä äänenkorkeutta sekä nopeutta livenä suoraan selaimessasi!</p>
+    <h1>🎵 Laulu- ja Rytmigeneraattori</h1>
+    
+    <!-- Lauluosio -->
+    <div class="section">
+        <h2>1. Laulun sanat & Tauot</h2>
+        <label for="lyrics">Kirjoita sanat (jokainen rivi lauletaan erikseen):</label>
+        <textarea id="lyrics">Hei maailma,
+laulan tänään uutta laulua,
+tässä on ensimmäinen tauko,
+ja jatketaan tästä eteenpäin.</textarea>
 
-    <div class="control-group">
-        <label for="lyrics">Laulun sanat:</label>
-        <textarea id="lyrics">Hei maailma, laulan tänään uutta laulua omilla sanoillani.</textarea>
+        <div style="margin-top: 15px;">
+            <label for="pause">Tauko rivien välissä (millisekuntia): <span id="pauseVal" class="value-display">1000 ms</span></label>
+            <input type="range" id="pause" min="200" max="3000" step="100" value="1000" oninput="document.getElementById('pauseVal').innerText = this.value + ' ms'">
+        </div>
+
+        <div style="margin-top: 10px;">
+            <label for="pitch">Äänenkorkeus (0.5 - 2.0): <span id="pitchVal" class="value-display">1.0</span></label>
+            <input type="range" id="pitch" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('pitchVal').innerText = this.value">
+        </div>
+
+        <button onclick="startSinging()" style="margin-top: 15px;">▶ Laula sanat taukojen kanssa</button>
+        <button class="stop" onclick="stopEverything()">⏹ Pysäytä kaikki</button>
     </div>
 
-    <div class="control-group">
-        <label for="pitch">Äänenkorkeus (Pitch: 0.1 - 2.0): <span id="pitchVal" class="value-display">1.0</span></label>
-        <input type="range" id="pitch" min="0.1" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('pitchVal').innerText = this.value">
-    </div>
+    <!-- Lyömäsoitinpadi ja Rytmit -->
+    <div class="section">
+        <h2>2. Lyömäsoitinpadi & Rytmit</h2>
+        <p>Napauta padeja itse tai kokeile valmiita rytmikomentoja!</p>
+        
+        <div class="pad-container">
+            <div class="drum-pad" onmousedown="playDrum('kick')" id="pad-kick">Bassi (Matala)</div>
+            <div class="drum-pad" onmousedown="playDrum('snare')" id="pad-snare">Virveli / Taputus</div>
+            <div class="drum-pad" onmousedown="playDrum('hihat')" id="pad-hihat">Hattu (Korkea)</div>
+            <div class="drum-pad" onmousedown="playDrum('clap')" id="pad-clap">Tehoste / Rim</div>
+        </div>
 
-    <div class="control-group">
-        <label for="rate">Nopeus / Tempo (0.5 - 2.0): <span id="rateVal" class="value-display">1.0</span></label>
-        <input type="range" id="rate" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('rateVal').innerText = this.value">
+        <div class="preset-container">
+            <button onclick="togglePreset('perus')">🥁 Peruskomppi Päällle/Pois</button>
+            <button onclick="togglePreset('cajon')">🪵 Cajón-rytmi Päälle/Pois</button>
+            <button class="stop" onclick="stopRhythm()" style="flex: 0.5;">Pysäytä rytmi</button>
+        </div>
     </div>
-
-    <button onclick="speakLyrics()">▶ Kuuntele ääni</button>
-    <button class="stop" onclick="stopSpeech()">⏹ Pysäytä</button>
 
     <script>
-        function speakLyrics() {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Pysäytä edellinen toisto
-                
-                const text = document.getElementById('lyrics').value;
-                const utterance = new SpeechSynthesisUtterance(text);
-                
-                utterance.lang = 'fi-FI';
-                utterance.pitch = parseFloat(document.getElementById('pitch').value);
-                utterance.rate = parseFloat(document.getElementById('rate').value);
+        // Äänikonteksti syntetisaattorille (toimii ilman erillisiä äänitiedostoja)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-                window.speechSynthesis.speak(utterance);
-            } else {
-                alert('Selaimesi ei tue puhesynteesiä.');
+        function playDrum(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'kick') {
+                osc.frequency.setValueAtTime(130, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+                gain.gain.setValueAtTime(1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+                flashPad('pad-kick');
+            } else if (type === 'snare') {
+                // Kohinaa virvelille
+                playNoise(0.1, 200);
+                flashPad('pad-snare');
+            } else if (type === 'hihat') {
+                playNoise(0.05, 1000);
+                flashPad('pad-hihat');
+            } else if (type === 'clap') {
+                playNoise(0.08, 600);
+                flashPad('pad-clap');
             }
         }
 
-        function stopSpeech() {
+        function playNoise(duration, filterFreq) {
+            const bufferSize = audioCtx.sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = filterFreq;
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            noise.start();
+        }
+
+        function flashPad(id) {
+            const pad = document.getElementById(id);
+            pad.classList.add('active');
+            setTimeout(() => pad.classList.remove('active'), 100);
+        }
+
+        // Valmiit automaattirytmit
+        let rhythmInterval = null;
+
+        function togglePreset(style) {
+            stopRhythm();
+            let step = 0;
+            // 120 BPM tahti (joka 250ms askel)
+            rhythmInterval = setInterval(() => {
+                if (style === 'perus') {
+                    // Yksinkertainen peruskomppi 4/4 tahtiin
+                    if (step % 4 === 0) playDrum('kick');
+                    if (step % 4 === 2) playDrum('snare');
+                    if (step % 2 === 0) playDrum('hihat');
+                } else if (style === 'cajon') {
+                    // Hieman elävämpi akustinen komppi
+                    if (step % 8 === 0 || step % 8 === 5) playDrum('kick');
+                    if (step % 8 === 4) playDrum('snare');
+                    if (step % 2 === 0) playDrum('hihat');
+                }
+                step = (step + 1) % 16;
+            }, 250);
+        }
+
+        function stopRhythm() {
+            if (rhythmInterval) {
+                clearInterval(rhythmInterval);
+                rhythmInterval = null;
+            }
+        }
+
+        // Laulun esitys rivi riviltä taukojen kera
+        let isSinging = false;
+
+        function startSinging() {
+            if (!('speechSynthesis' in window)) {
+                alert('Selaimesi ei tue puhesynteesiä.');
+                return;
+            }
+            stopEverything();
+            isSinging = true;
+
+            const rawText = document.getElementById('lyrics').value;
+            const lines = rawText.split('\n');
+            const pitch = parseFloat(document.getElementById('pitch').value);
+            const pauseMs = parseInt(document.getElementById('pause').value);
+
+            singLine(lines, 0, pitch, pauseMs);
+        }
+
+        function singLine(lines, index, pitch, pauseMs) {
+            if (!isSinging || index >= lines.length) return;
+
+            const line = lines[index].trim();
+            if (line === "") {
+                // Jos rivi on tyhjä, pidetään ylimääräinen tauko ja siirrytään seuraavaan
+                setTimeout(() => {
+                    singLine(lines, index + 1, pitch, pauseMs);
+                }, pauseMs);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(line);
+            utterance.lang = 'fi-FI';
+            utterance.pitch = pitch;
+
+            utterance.onend = () => {
+                if (isSinging) {
+                    setTimeout(() => {
+                        singLine(lines, index + 1, pitch, pauseMs);
+                    }, pauseMs);
+                }
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopEverything() {
+            isSinging = false;
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
+            stopRhythm();
         }
     </script>
 
