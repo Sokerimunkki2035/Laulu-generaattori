@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <title>Laulu- ja Äänigeneraattori</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; background: #f4f4f9; color: #333; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        textarea { width: 100%; height: 110px; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
+        .control-group { margin: 20px 0; background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #e1e1e8; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .value-display { float: right; color: #007bff; font-weight: bold; }
+        button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: background 0.2s; }
+        button:hover { background: #0056b3; }
+        button.stop { background: #dc3545; margin-top: 10px; }
+        button.stop:hover { background: #a71d2a; }
+    </style>
+</head>
+<body>
+
+    <h1>🎵 Selaimen Ääni- ja Laulugeneraattori</h1>
+    <p>Kirjoita omat sanat ja säädä äänenkorkeutta sekä nopeutta livenä suoraan selaimessasi!</p>
+
+    <div class="control-group">
+        <label for="lyrics">Laulun sanat:</label>
+        <textarea id="lyrics">Hei maailma, laulan tänään uutta laulua omilla sanoillani.</textarea>
+    </div>
+
+    <div class="control-group">
+        <label for="pitch">Äänenkorkeus (Pitch: 0.1 - 2.0): <span id="pitchVal" class="value-display">1.0</span></label>
+        <input type="range" id="pitch" min="0.1" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('pitchVal').innerText = this.value">
+    </div>
+
+    <div class="control-group">
+        <label for="rate">Nopeus / Tempo (0.5 - 2.0): <span id="rateVal" class="value-display">1.0</span></label>
+        <input type="range" id="rate" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('rateVal').innerText = this.value">
+    </div>
+
+    <button onclick="speakLyrics()">▶ Kuuntele ääni</button>
+    <button class="stop" onclick="stopSpeech()">⏹ Pysäytä</button>
+
+    <script>
+        function speakLyrics() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Pysäytä edellinen toisto
+                
+                const text = document.getElementById('lyrics').value;
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                utterance.lang = 'fi-FI';
+                utterance.pitch = parseFloat(document.getElementById('pitch').value);
+                utterance.rate = parseFloat(document.getElementById('rate').value);
+
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Selaimesi ei tue puhesynteesiä.');
+            }
+        }
+
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+    </script>
+
+</body>
+</html>
