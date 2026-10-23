@@ -9,12 +9,15 @@
         textarea { width: 100%; height: 120px; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
         .section { background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #e1e1e8; }
         label { display: block; margin-bottom: 6px; font-weight: bold; color: #444; }
-        input[type=range] { width: 100%; cursor: pointer; }
+        input[type=range], select { width: 100%; cursor: pointer; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px; }
         .value-display { float: right; color: #007bff; font-weight: bold; }
         button { background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: background 0.2s; margin-top: 5px; }
         button:hover { background: #0056b3; }
         button.stop { background: #dc3545; }
         button.stop:hover { background: #a71d2a; }
+        .edit-btns { display: flex; gap: 10px; margin-top: 8px; }
+        .edit-btns button { background: #6c757d; font-size: 14px; padding: 8px; }
+        .edit-btns button:hover { background: #5a6268; }
         .pad-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
         .drum-pad { background: #e2e8f0; border: 2px solid #cbd5e1; padding: 20px; font-size: 18px; font-weight: bold; text-align: center; border-radius: 8px; cursor: pointer; user-select: none; transition: background 0.1s; }
         .drum-pad:active, .drum-pad.active { background: #3b82f6; color: white; border-color: #2563eb; }
@@ -29,14 +32,23 @@
     
     <!-- Lauluosio -->
     <div class="section">
-        <h2>1. Laulun sanat & Tauot</h2>
-        <label for="lyrics">Kirjoita sanat (jokainen rivi lauletaan erikseen):</label>
-        <textarea id="lyrics">Hei maailma,
-laulan tänään uutta laulua,
-tässä on ensimmäinen tauko,
-ja jatketaan tästä eteenpäin.</textarea>
+        <h2>1. Laulun sanat & Ääni</h2>
+        <label for="lyrics">Kirjoita sanat:</label>
+        <textarea id="lyrics" id="lyricsBox">Hei maailma... laulan uutta laulua.
+Tässä on uusi rivi ja toinen tauko...</textarea>
+
+        <!-- Editointinapit -->
+        <div class="edit-btns">
+            <button onclick="insertAtCursor(' ... ')">⏸ Lisää tauko sanojen väliin</button>
+            <button onclick="insertAtCursor('\n')">↩ Uusi rivi</button>
+        </div>
 
         <div style="margin-top: 15px;">
+            <label for="voiceSelect">Valitse laulajan ääni (mies/nainen vaihtelee laitteen mukaan):</label>
+            <select id="voiceSelect"></select>
+        </div>
+
+        <div style="margin-top: 10px;">
             <label for="pause">Tauko rivien välissä (millisekuntia): <span id="pauseVal" class="value-display">1000 ms</span></label>
             <input type="range" id="pause" min="200" max="3000" step="100" value="1000" oninput="document.getElementById('pauseVal').innerText = this.value + ' ms'">
         </div>
@@ -70,7 +82,46 @@ ja jatketaan tästä eteenpäin.</textarea>
     </div>
 
     <script>
-        // Äänikonteksti syntetisaattorille (toimii ilman erillisiä äänitiedostoja)
+        // Äänten lataus selaimeen
+        let voices = [];
+        const voiceSelect = document.getElementById('voiceSelect');
+
+        function loadVoices() {
+            voices = window.speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            
+            // Suodatetaan ensin suomenkieliset äänet
+            let fiVoices = voices.filter(v => v.lang.startsWith('fi'));
+            
+            // Jos suomenkielisiä ei löydy, näytetään kaikki
+            let targetVoices = fiVoices.length > 0 ? fiVoices : voices;
+
+            targetVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = voices.indexOf(voice);
+                option.textContent = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+            setTimeout(loadVoices, 100);
+        }
+
+        // Apufunktio editointinapeille (lisää tekstikenttään kursorin kohdalle)
+        function insertAtCursor(textToInsert) {
+            const textarea = document.getElementById('lyrics');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+
+            textarea.value = text.substring(0, start) + textToInsert + text.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + textToInsert.length;
+            textarea.focus();
+        }
+
+        // Äänikonteksti syntetisaattorille (rummut)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playDrum(type) {
@@ -93,7 +144,6 @@ ja jatketaan tästä eteenpäin.</textarea>
                 osc.stop(now + 0.15);
                 flashPad('pad-kick');
             } else if (type === 'snare') {
-                // Kohinaa virvelille
                 playNoise(0.1, 200);
                 flashPad('pad-snare');
             } else if (type === 'hihat') {
@@ -143,15 +193,12 @@ ja jatketaan tästä eteenpäin.</textarea>
         function togglePreset(style) {
             stopRhythm();
             let step = 0;
-            // 120 BPM tahti (joka 250ms askel)
             rhythmInterval = setInterval(() => {
                 if (style === 'perus') {
-                    // Yksinkertainen peruskomppi 4/4 tahtiin
                     if (step % 4 === 0) playDrum('kick');
                     if (step % 4 === 2) playDrum('snare');
                     if (step % 2 === 0) playDrum('hihat');
                 } else if (style === 'cajon') {
-                    // Hieman elävämpi akustinen komppi
                     if (step % 8 === 0 || step % 8 === 5) playDrum('kick');
                     if (step % 8 === 4) playDrum('snare');
                     if (step % 2 === 0) playDrum('hihat');
@@ -182,18 +229,18 @@ ja jatketaan tästä eteenpäin.</textarea>
             const lines = rawText.split('\n');
             const pitch = parseFloat(document.getElementById('pitch').value);
             const pauseMs = parseInt(document.getElementById('pause').value);
+            const selectedVoiceIndex = voiceSelect.value;
 
-            singLine(lines, 0, pitch, pauseMs);
+            singLine(lines, 0, pitch, pauseMs, selectedVoiceIndex);
         }
 
-        function singLine(lines, index, pitch, pauseMs) {
+        function singLine(lines, index, pitch, pauseMs, voiceIndex) {
             if (!isSinging || index >= lines.length) return;
 
             const line = lines[index].trim();
             if (line === "") {
-                // Jos rivi on tyhjä, pidetään ylimääräinen tauko ja siirrytään seuraavaan
                 setTimeout(() => {
-                    singLine(lines, index + 1, pitch, pauseMs);
+                    singLine(lines, index + 1, pitch, pauseMs, voiceIndex);
                 }, pauseMs);
                 return;
             }
@@ -202,10 +249,14 @@ ja jatketaan tästä eteenpäin.</textarea>
             utterance.lang = 'fi-FI';
             utterance.pitch = pitch;
 
+            if (voices[voiceIndex]) {
+                utterance.voice = voices[voiceIndex];
+            }
+
             utterance.onend = () => {
                 if (isSinging) {
                     setTimeout(() => {
-                        singLine(lines, index + 1, pitch, pauseMs);
+                        singLine(lines, index + 1, pitch, pauseMs, voiceIndex);
                     }, pauseMs);
                 }
             };
